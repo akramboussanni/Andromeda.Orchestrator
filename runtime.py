@@ -2,6 +2,7 @@ import base64
 import json
 import logging
 import os
+import pathlib
 import shlex
 import socket
 import subprocess
@@ -18,7 +19,25 @@ PORT_RANGE_END = int(os.getenv("HOST_PORT_RANGE_END", "7977"))
 MAX_SESSIONS = int(os.getenv("HOST_MAX_SESSIONS", "6"))
 DOCKER_IMAGE = os.getenv("HOST_DOCKER_IMAGE", "").strip()
 DOCKER_CONTAINER_PREFIX = os.getenv("HOST_DOCKER_CONTAINER_PREFIX", "andromeda-eob")
-DOCKER_ENTRYPOINT = os.getenv("HOST_DOCKER_ENTRYPOINT", "wine ./enemy-on-board.exe")
+DOCKER_ENTRYPOINT = os.getenv("HOST_DOCKER_ENTRYPOINT", "")
+DOCKER_DATA_ROOT = os.getenv("HOST_DOCKER_DATA_ROOT", "").strip()
+
+_FORWARDED_CONTAINER_ENV = (
+    "STEAM_USER",
+    "STEAM_PASS",
+    "STEAM_AUTH_CODE",
+    "STEAM_GUARD_CODE",
+    "STEAM_BRANCH",
+    "STEAM_BRANCH_PASSWORD",
+    "EOB_APP_ID",
+    "EOB_AUTO_UPDATE",
+    "EOB_VALIDATE",
+    "EOB_EXE_RELATIVE_PATH",
+    "MELONLOADER_URL",
+    "MELONLOADER_VERSION",
+    "ANDROMEDA_MOD_URL",
+    "ANDROMEDA_MOD_VERSION",
+)
 
 _lock = threading.Lock()
 _used_ports: set[int] = set()
@@ -73,6 +92,29 @@ def _release_pair(session_id: str):
         _used_ports.discard(int(state["voicePort"]))
 
 
+def _build_container_env_args(session_id: str) -> list[str]:
+    args = ["-e", f"ANDROMEDA_SESSION_ID={session_id}"]
+    if DOCKER_DATA_ROOT:
+        args.extend(["-e", "GAME_DIR=/data/game"])
+        args.extend(["-e", f"WINEPREFIX=/data/wineprefix/{session_id}"])
+        args.extend(["-e", "MELONLOADER_DIR=/data/melonloader"])
+        args.extend(["-e", "MODS_DIR=/data/mods"])
+
+    for env_name in _FORWARDED_CONTAINER_ENV:
+        value = os.getenv(env_name)
+        if value is not None and value != "":
+            args.extend(["-e", f"{env_name}={value}"])
+    return args
+
+
+def _build_container_volume_args() -> list[str]:
+    if not DOCKER_DATA_ROOT:
+        return []
+    host_path = pathlib.Path(DOCKER_DATA_ROOT).expanduser().resolve()
+    host_path.mkdir(parents=True, exist_ok=True)
+    return ["-v", f"{host_path}:/data"]
+
+
 def create_session(payload: dict[str, Any]) -> dict[str, Any]:
     session_id = str(payload.get("sessionId", "")).strip()
     if not session_id:
@@ -122,6 +164,8 @@ def create_session(payload: dict[str, Any]) -> dict[str, Any]:
                 "-p", f"{voice_port}:{voice_port}/udp",
                 DOCKER_IMAGE,
             ]
+            cmd[6:6] = _build_container_volume_args()
+            cmd[6:6] = _build_container_env_args(session_id)
             if DOCKER_ENTRYPOINT:
                 cmd.extend(shlex.split(DOCKER_ENTRYPOINT))
             cmd.extend(args)

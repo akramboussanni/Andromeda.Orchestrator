@@ -1,6 +1,6 @@
-# Andromeda Host Runtime
+# Andromeda Orchestrator (Host Runtime)
 
-Andromeda.Orchestrator is the game-host service that runs dedicated sessions and exposes a small API used by Andromeda.Core.
+Andromeda.Orchestrator is the game-host service that runs dedicated sessions and exposes a small API used by Andromeda.Core. The Orchestrator/Core connection is "engineered" non-orthodox with DNS hacks to try to keep a near-zero cost when unused.
 
 ## API
 
@@ -27,13 +27,60 @@ Set HOST_API_TOKEN to require authentication. Clients can send:
 - HOST_DOCKER_IMAGE (required in docker mode)
 - HOST_DOCKER_CONTAINER_PREFIX
 - HOST_DOCKER_ENTRYPOINT
+- HOST_DOCKER_DATA_ROOT (optional; mount path reused by spawned game containers)
 - HOST_API_TOKEN (recommended)
+
+## Docker host image automation
+
+Use the image scaffold in `host-image/` for client-based hosting (game client + MelonLoader + Andromeda patches).
+
+- Build context: `Andromeda.Orchestrator/host-image`
+- Session containers use the image ENTRYPOINT by default.
+- For persistence and fast restarts, set `HOST_DOCKER_DATA_ROOT` so `/data` is shared across runs.
+
+The repository includes a GitHub Actions workflow that publishes this image to GHCR.
+
+### Required deployment notes
+
+- Keep image and registry private.
+- Do not commit game files or Steam credentials.
+- Anonymous SteamCMD can fail for some depots; use authenticated Steam credentials when needed.
+- Verify game licensing terms before automating distribution.
 
 ## Local run
 
 ```bash
 uvicorn main:app --host 0.0.0.0 --port 9000
 ```
+
+## Startup script requirements
+
+If you use `startup.sh` (Cloudflare DNS update + Orchestrator launch), ensure the host has:
+
+- `bash`
+- `curl`
+- `python3`
+
+Python package requirements remain:
+
+- `fastapi>=0.115.0`
+- `uvicorn[standard]>=0.30.0`
+
+Required environment variables for `startup.sh`:
+
+- `CF_API_TOKEN`
+- `CF_ZONE_ID`
+- `CF_RECORD_NAME`
+
+Common optional variables:
+
+- `CF_RECORD_TYPE` (default `A`)
+- `CF_PROXIED` (default `false`)
+- `CF_TTL` (default `120`)
+- `ORCH_MODULE` (default `main:app`)
+- `ORCH_HOST` (default `0.0.0.0`)
+- `ORCH_PORT` (default `9000`)
+- `ORCH_WORKDIR` (default `/opt/andromeda-orchestrator`)
 
 ## Production notes
 
