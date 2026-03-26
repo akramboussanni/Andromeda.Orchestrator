@@ -1,6 +1,6 @@
 # Andromeda Host Runtime
 
-Host Runtime is the game-host service that runs dedicated sessions and exposes a small API used by PythonServer.
+Andromeda.Orchestrator is the game-host service that runs dedicated sessions and exposes a small API used by Andromeda.Core.
 
 ## API
 

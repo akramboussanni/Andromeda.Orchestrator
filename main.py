@@ -1,11 +1,9 @@
 import os
-from typing import Any
-from typing import Optional
+from typing import Any, Optional
 
+import runtime
 from fastapi import FastAPI, Header, HTTPException
 from pydantic import BaseModel
-
-from host_runtime import runtime
 
 app = FastAPI(title="Andromeda Host Runtime", version="1.0.0")
 API_TOKEN = os.getenv("HOST_API_TOKEN", "").strip()
