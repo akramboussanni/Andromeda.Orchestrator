@@ -91,6 +91,3 @@ PY
     echo "DNS already up to date"
   fi
 fi
-
-cd "${ORCH_WORKDIR}"
-exec python3 -m uvicorn "${ORCH_MODULE}" --host "${ORCH_HOST}" --port "${ORCH_PORT}"
