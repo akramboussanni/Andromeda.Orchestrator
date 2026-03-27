@@ -17,6 +17,10 @@ STEAM_BRANCH="${STEAM_BRANCH:-}"
 STEAM_BRANCH_PASSWORD="${STEAM_BRANCH_PASSWORD:-}"
 STEAM_USE_CACHE="${STEAM_USE_CACHE:-1}"
 
+# Set environment variables to help prevent segfaults and improve stability
+export MALLOC_TRIM_THRESHOLD=128000
+export LD_LIBRARY_PATH="/lib/i386-linux-gnu:/usr/lib/i386-linux-gnu:${LD_LIBRARY_PATH:-}"
+
 mkdir -p "${GAME_DIR}" "${WINEPREFIX}"
 
 /opt/andromeda/install_steamcmd.sh
