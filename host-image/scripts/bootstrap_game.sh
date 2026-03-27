@@ -45,37 +45,41 @@ run_steamcmd_install() {
 
   local auth="${STEAM_AUTH_CODE:-${STEAM_GUARD_CODE:-}}"
 
-  if [[ "${STEAM_USER}" == "anonymous" ]]; then
-    echo "[bootstrap] Running SteamCMD with anonymous login"
-    gosu andromeda "${STEAMCMD_DIR}/steamcmd.sh" \
-      +force_install_dir "${GAME_DIR}" \
-      +login anonymous \
-      "${app_update_args[@]}" \
-      "${branch_args[@]}" \
-      +quit
-  else
-    echo "[bootstrap] Running SteamCMD with authenticated login for ${STEAM_USER}"
-    local login_args=("+login" "${STEAM_USER}")
-    
-    # If using cached login token (empty password), don't pass password
-    # Steam will use cached credentials from ~/.steam directory
-    if [[ -n "${STEAM_PASS}" ]]; then
-      login_args+=("${STEAM_PASS}")
-      if [[ -n "${auth}" ]]; then
-        login_args+=("${auth}")
-      fi
-      echo "[bootstrap] Using provided credentials (first-time setup)"
+  # SteamCMD will segfault if the soft file descriptor limit is too high due to 32-bit select() limitations
+  (
+    ulimit -n 1024
+    if [[ "${STEAM_USER}" == "anonymous" ]]; then
+      echo "[bootstrap] Running SteamCMD with anonymous login"
+      gosu andromeda "${STEAMCMD_DIR}/steamcmd.sh" \
+        +force_install_dir "${GAME_DIR}" \
+        +login anonymous \
+        "${app_update_args[@]}" \
+        "${branch_args[@]}" \
+        +quit
     else
-      echo "[bootstrap] Using cached login token from ~/.steam directory"
+      echo "[bootstrap] Running SteamCMD with authenticated login for ${STEAM_USER}"
+      local login_args=("+login" "${STEAM_USER}")
+      
+      # If using cached login token (empty password), don't pass password
+      # Steam will use cached credentials from ~/.steam directory
+      if [[ -n "${STEAM_PASS}" ]]; then
+        login_args+=("${STEAM_PASS}")
+        if [[ -n "${auth}" ]]; then
+          login_args+=("${auth}")
+        fi
+        echo "[bootstrap] Using provided credentials (first-time setup)"
+      else
+        echo "[bootstrap] Using cached login token from ~/.steam directory"
+      fi
+      
+      gosu andromeda "${STEAMCMD_DIR}/steamcmd.sh" \
+        +force_install_dir "${GAME_DIR}" \
+        "${login_args[@]}" \
+        "${app_update_args[@]}" \
+        "${branch_args[@]}" \
+        +quit
     fi
-    
-    gosu andromeda "${STEAMCMD_DIR}/steamcmd.sh" \
-      +force_install_dir "${GAME_DIR}" \
-      "${login_args[@]}" \
-      "${app_update_args[@]}" \
-      "${branch_args[@]}" \
-      +quit
-  fi
+  )
 }
 
 if [[ "${EOB_AUTO_UPDATE}" == "1" ]] || [[ ! -f "${GAME_DIR}/${EOB_EXE_RELATIVE_PATH}" ]]; then
