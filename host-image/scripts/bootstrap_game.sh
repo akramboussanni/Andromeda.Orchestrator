@@ -19,6 +19,8 @@ STEAM_USE_CACHE="${STEAM_USE_CACHE:-1}"
 
 mkdir -p "${GAME_DIR}" "${WINEPREFIX}"
 
+/opt/andromeda/install_steamcmd.sh
+
 run_steamcmd_install() {
   local app_update_args=("+app_update" "${EOB_APP_ID}")
   if [[ "${EOB_VALIDATE}" == "1" ]]; then
