@@ -17,6 +17,18 @@ RUN dpkg --add-architecture i386 \
         winbind \
         xvfb \
         lib32gcc-s1 \
+        libstdc++6:i386 \
+        libc6:i386 \
+        libfontconfig1:i386 \
+        libxcb1:i386 \
+        libx11-6:i386 \
+        libxext6:i386 \
+        libxinerama1:i386 \
+        libxi6:i386 \
+        libffi7:i386 \
+        libncurses6:i386 \
+        libasound2:i386 \
+        libpulse0:i386 \
     && rm -rf /var/lib/apt/lists/*
 
 RUN useradd -m -u 1000 -s /bin/bash andromeda

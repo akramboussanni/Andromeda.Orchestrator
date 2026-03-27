@@ -19,6 +19,7 @@ PORT_RANGE_END = int(os.getenv("HOST_PORT_RANGE_END", "7977"))
 MAX_SESSIONS = int(os.getenv("HOST_MAX_SESSIONS", "6"))
 DOCKER_IMAGE = os.getenv("HOST_DOCKER_IMAGE", "").strip()
 DOCKER_CONTAINER_PREFIX = os.getenv("HOST_DOCKER_CONTAINER_PREFIX", "andromeda-eob")
+DOCKER_AUTO_REMOVE = os.getenv("HOST_DOCKER_AUTO_REMOVE", "false").strip().lower() == "true"
 DOCKER_ENTRYPOINT = os.getenv("HOST_DOCKER_ENTRYPOINT", "")
 DOCKER_DATA_ROOT = os.getenv("HOST_DOCKER_DATA_ROOT", "").strip()
 STEAM_CACHE_VOLUME = os.getenv("HOST_STEAM_CACHE_VOLUME", "").strip()
@@ -200,16 +201,20 @@ def create_session(payload: dict[str, Any]) -> dict[str, Any]:
             cname = f"{DOCKER_CONTAINER_PREFIX}-{session_id[:12]}"
             logger.info("[DEBUG] container name will be: %s", cname)
 
-            cmd = [
-                "docker", "run", "-d", "--rm",
+            cmd = ["docker", "run", "-d"]
+            if DOCKER_AUTO_REMOVE:
+                cmd.append("--rm")
+            cmd.extend([
                 "--name", cname,
+            ])
+            cmd.extend(_build_container_volume_args())
+            cmd.extend(_build_container_env_args(session_id))
+            cmd.extend([
                 "-p", f"{game_port}:{game_port}/udp",
                 "-p", f"{game_port}:{game_port}/tcp",
                 "-p", f"{voice_port}:{voice_port}/udp",
                 DOCKER_IMAGE,
-            ]
-            cmd[6:6] = _build_container_volume_args()
-            cmd[6:6] = _build_container_env_args(session_id)
+            ])
             if DOCKER_ENTRYPOINT:
                 logger.info("[DEBUG] adding DOCKER_ENTRYPOINT: %s", DOCKER_ENTRYPOINT)
                 cmd.extend(shlex.split(DOCKER_ENTRYPOINT))
