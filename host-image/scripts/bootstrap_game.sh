@@ -17,9 +17,9 @@ STEAM_BRANCH="${STEAM_BRANCH:-}"
 STEAM_BRANCH_PASSWORD="${STEAM_BRANCH_PASSWORD:-}"
 STEAM_USE_CACHE="${STEAM_USE_CACHE:-1}"
 
-# Set environment variables to help prevent segfaults and improve stability
+# Set environment variables to help prevent segfaults and improve stability 
 export MALLOC_TRIM_THRESHOLD=128000
-export LD_LIBRARY_PATH="/lib/i386-linux-gnu:/usr/lib/i386-linux-gnu:${LD_LIBRARY_PATH:-}"
+# LD_LIBRARY_PATH is deliberately not set here to avoid poisoning SteamCMD's environment!
 export HOME="${HOME:-/home/andromeda}"
 
 mkdir -p "${GAME_DIR}" "${WINEPREFIX}"
@@ -94,4 +94,5 @@ if [[ ! -f "${EOB_EXE_RELATIVE_PATH}" ]]; then
 fi
 
 echo "[bootstrap] Launching ${EOB_EXE_RELATIVE_PATH} $*"
+export LD_LIBRARY_PATH="/lib/i386-linux-gnu:/usr/lib/i386-linux-gnu:${LD_LIBRARY_PATH:-}"
 exec gosu andromeda xvfb-run -a wine "${EOB_EXE_RELATIVE_PATH}" "$@"
