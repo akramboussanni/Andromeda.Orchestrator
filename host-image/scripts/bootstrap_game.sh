@@ -20,10 +20,13 @@ STEAM_USE_CACHE="${STEAM_USE_CACHE:-1}"
 # Set environment variables to help prevent segfaults and improve stability
 export MALLOC_TRIM_THRESHOLD=128000
 export LD_LIBRARY_PATH="/lib/i386-linux-gnu:/usr/lib/i386-linux-gnu:${LD_LIBRARY_PATH:-}"
+export HOME="${HOME:-/home/andromeda}"
 
 mkdir -p "${GAME_DIR}" "${WINEPREFIX}"
+mkdir -p "${HOME}/.steam"
+chown -R andromeda:andromeda "${STEAMCMD_DIR}" "${GAME_DIR}" "${WINEPREFIX}" "${MELONLOADER_DIR:-/data/melonloader}" "${MODS_DIR:-/data/mods}" "${HOME}/.steam"
 
-/opt/andromeda/install_steamcmd.sh
+gosu andromeda /opt/andromeda/install_steamcmd.sh
 
 run_steamcmd_install() {
   local app_update_args=("+app_update" "${EOB_APP_ID}")
@@ -43,7 +46,7 @@ run_steamcmd_install() {
 
   if [[ "${STEAM_USER}" == "anonymous" ]]; then
     echo "[bootstrap] Running SteamCMD with anonymous login"
-    "${STEAMCMD_DIR}/steamcmd.sh" \
+    gosu andromeda "${STEAMCMD_DIR}/steamcmd.sh" \
       +force_install_dir "${GAME_DIR}" \
       +login anonymous \
       "${app_update_args[@]}" \
@@ -65,7 +68,7 @@ run_steamcmd_install() {
       echo "[bootstrap] Using cached login token from ~/.steam directory"
     fi
     
-    "${STEAMCMD_DIR}/steamcmd.sh" \
+    gosu andromeda "${STEAMCMD_DIR}/steamcmd.sh" \
       +force_install_dir "${GAME_DIR}" \
       "${login_args[@]}" \
       "${app_update_args[@]}" \
@@ -80,8 +83,8 @@ else
   echo "[bootstrap] EOB_AUTO_UPDATE=0 and executable exists; skipping SteamCMD update"
 fi
 
-/opt/andromeda/install_melonloader.sh
-/opt/andromeda/install_andromeda_mod.sh
+gosu andromeda /opt/andromeda/install_melonloader.sh
+gosu andromeda /opt/andromeda/install_andromeda_mod.sh
 
 cd "${GAME_DIR}"
 
@@ -91,4 +94,4 @@ if [[ ! -f "${EOB_EXE_RELATIVE_PATH}" ]]; then
 fi
 
 echo "[bootstrap] Launching ${EOB_EXE_RELATIVE_PATH} $*"
-exec xvfb-run -a wine "${EOB_EXE_RELATIVE_PATH}" "$@"
+exec gosu andromeda xvfb-run -a wine "${EOB_EXE_RELATIVE_PATH}" "$@"

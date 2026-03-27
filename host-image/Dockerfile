@@ -38,10 +38,11 @@ ENV STEAMCMD_DIR=/opt/steamcmd \
     WINEPREFIX=/data/wineprefix \
     MELONLOADER_DIR=/data/melonloader \
     MODS_DIR=/data/mods \
-    EOB_APP_ID=999860
+    EOB_APP_ID=999860 \
+    HOME=/home/andromeda
 
-RUN mkdir -p /opt/andromeda /data /home/andromeda/.steam \
-    && chown -R andromeda:andromeda /opt/andromeda /data /home/andromeda/.steam
+RUN mkdir -p /opt/andromeda /opt/steamcmd /data /home/andromeda/.steam \
+    && chown -R andromeda:andromeda /opt/andromeda /opt/steamcmd /data /home/andromeda/.steam
 
 # Volume for Steam login cache (persists credentials between container runs)
 VOLUME ["/home/andromeda/.steam"]
