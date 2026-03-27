@@ -45,12 +45,15 @@ run_steamcmd_install() {
 
   local auth="${STEAM_AUTH_CODE:-${STEAM_GUARD_CODE:-}}"
 
-  # SteamCMD will segfault if the soft file descriptor limit is too high due to 32-bit select() limitations
+  # SteamCMD will segfault if the soft file descriptor limit is too high due to 32-bit select() limitations.
+  # On prod kernels with vsyscall=none (hardened cloud VMs), the 32-bit steamcmd binary also segfaults
+  # trying to access the legacy vsyscall page. Wrapping with `linux32` forces the PER_LINUX32 personality
+  # flag before exec, which fixes both the vsyscall mapping and the 32-bit ABI setup on such kernels.
   (
     ulimit -n 1024
     if [[ "${STEAM_USER}" == "anonymous" ]]; then
       echo "[bootstrap] Running SteamCMD with anonymous login"
-      gosu andromeda "${STEAMCMD_DIR}/steamcmd.sh" \
+      gosu andromeda linux32 "${STEAMCMD_DIR}/steamcmd.sh" \
         +force_install_dir "${GAME_DIR}" \
         +login anonymous \
         "${app_update_args[@]}" \
@@ -72,7 +75,7 @@ run_steamcmd_install() {
         echo "[bootstrap] Using cached login token from ~/.steam directory"
       fi
       
-      gosu andromeda "${STEAMCMD_DIR}/steamcmd.sh" \
+      gosu andromeda linux32 "${STEAMCMD_DIR}/steamcmd.sh" \
         +force_install_dir "${GAME_DIR}" \
         "${login_args[@]}" \
         "${app_update_args[@]}" \

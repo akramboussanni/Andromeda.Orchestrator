@@ -12,6 +12,7 @@ RUN dpkg --add-architecture i386 \
         xz-utils \
         procps \
         gosu \
+        util-linux \
         wine64 \
         wine32 \
         winbind \
