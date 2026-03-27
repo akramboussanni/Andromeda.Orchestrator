@@ -23,7 +23,7 @@ DOCKER_AUTO_REMOVE = os.getenv("HOST_DOCKER_AUTO_REMOVE", "false").strip().lower
 DOCKER_ENTRYPOINT = os.getenv("HOST_DOCKER_ENTRYPOINT", "")
 DOCKER_DATA_ROOT = os.getenv("HOST_DOCKER_DATA_ROOT", "").strip()
 STEAM_CACHE_VOLUME = os.getenv("HOST_STEAM_CACHE_VOLUME", "").strip()
-MELONLOADER_URL = os.getenv("MELONLOADER_URL", "https://api.github.com/repos/LavaGang/MelonLoader/releases/latest")
+MELONLOADER_URL = os.getenv("MELONLOADER_URL", "https://github.com/LavaGang/MelonLoader/releases/latest/download/MelonLoader.Linux.x64.zip")
 MELONLOADER_VERSION = os.getenv("MELONLOADER_VERSION", "")
 ANDROMEDA_MOD_URL = os.getenv("ANDROMEDA_MOD_URL", "https://api.github.com/repos/akramboussanni/Andromeda.Mod/releases/latest")
 ANDROMEDA_MOD_VERSION = os.getenv("ANDROMEDA_MOD_VERSION", "")
@@ -201,7 +201,7 @@ def create_session(payload: dict[str, Any]) -> dict[str, Any]:
             cname = f"{DOCKER_CONTAINER_PREFIX}-{session_id[:12]}"
             logger.info("[DEBUG] container name will be: %s", cname)
 
-            cmd = ["docker", "run", "-d", "--security-opt", "seccomp=unconfined", "--ipc=host", "--shm-size=256m"]
+            cmd = ["docker", "run", "-d", "--security-opt", "seccomp=unconfined", "--ipc=host", "--shm-size=256m", "--ulimit", "nofile=1024:1024"]
             if DOCKER_AUTO_REMOVE:
                 cmd.append("--rm")
             cmd.extend([
