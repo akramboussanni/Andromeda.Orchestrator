@@ -22,6 +22,15 @@ DOCKER_CONTAINER_PREFIX = os.getenv("HOST_DOCKER_CONTAINER_PREFIX", "andromeda-e
 DOCKER_ENTRYPOINT = os.getenv("HOST_DOCKER_ENTRYPOINT", "")
 DOCKER_DATA_ROOT = os.getenv("HOST_DOCKER_DATA_ROOT", "").strip()
 
+logger.info("[STARTUP] Configuration loaded:")
+logger.info("[STARTUP]   RUNTIME_MODE=%s", RUNTIME_MODE)
+logger.info("[STARTUP]   DOCKER_IMAGE=%s", DOCKER_IMAGE)
+logger.info("[STARTUP]   DOCKER_CONTAINER_PREFIX=%s", DOCKER_CONTAINER_PREFIX)
+logger.info("[STARTUP]   DOCKER_ENTRYPOINT=%s", DOCKER_ENTRYPOINT)
+logger.info("[STARTUP]   DOCKER_DATA_ROOT=%s", DOCKER_DATA_ROOT)
+logger.info("[STARTUP]   PORT_RANGE=%s-%s", PORT_RANGE_START, PORT_RANGE_END)
+logger.info("[STARTUP]   MAX_SESSIONS=%s", MAX_SESSIONS)
+
 _FORWARDED_CONTAINER_ENV = (
     "STEAM_USER",
     "STEAM_PASS",
@@ -120,16 +129,23 @@ def create_session(payload: dict[str, Any]) -> dict[str, Any]:
     if not session_id:
         raise RuntimeError("sessionId is required")
 
+    logger.info("[DEBUG] create_session called with: sessionId=%s, payload keys=%s", session_id, list(payload.keys()))
+
     region = str(payload.get("region", "us"))
     name = str(payload.get("name", "Andromeda Session"))
     gamemode = str(payload.get("gamemode", "CustomParty"))
     gamemode_data = payload.get("gamemodeData")
     is_public = bool(payload.get("isPublic", False))
 
+    logger.info("[DEBUG] session config: region=%s, name=%s, gamemode=%s, isPublic=%s", region, name, gamemode, is_public)
+
     game_port, voice_port = _allocate_pair(session_id)
+    logger.info("[DEBUG] allocated ports: gamePort=%s, voicePort=%s", game_port, voice_port)
 
     if RUNTIME_MODE not in ("docker", "process"):
         raise RuntimeError(f"unsupported HOST_RUNTIME_MODE={RUNTIME_MODE}")
+
+    logger.info("[DEBUG] RUNTIME_MODE=%s", RUNTIME_MODE)
 
     args = [
         "-batchmode",
@@ -153,9 +169,14 @@ def create_session(payload: dict[str, Any]) -> dict[str, Any]:
     try:
         if RUNTIME_MODE == "docker":
             if not DOCKER_IMAGE:
+                logger.error("[DEBUG] DOCKER_IMAGE is empty! DOCKER_IMAGE='%s'", DOCKER_IMAGE)
                 raise RuntimeError("HOST_DOCKER_IMAGE is required for docker mode")
 
+            logger.info("[DEBUG] docker mode: DOCKER_IMAGE=%s", DOCKER_IMAGE)
+
             cname = f"{DOCKER_CONTAINER_PREFIX}-{session_id[:12]}"
+            logger.info("[DEBUG] container name will be: %s", cname)
+
             cmd = [
                 "docker", "run", "-d", "--rm",
                 "--name", cname,
@@ -167,11 +188,20 @@ def create_session(payload: dict[str, Any]) -> dict[str, Any]:
             cmd[6:6] = _build_container_volume_args()
             cmd[6:6] = _build_container_env_args(session_id)
             if DOCKER_ENTRYPOINT:
+                logger.info("[DEBUG] adding DOCKER_ENTRYPOINT: %s", DOCKER_ENTRYPOINT)
                 cmd.extend(shlex.split(DOCKER_ENTRYPOINT))
             cmd.extend(args)
 
+            logger.info("[DEBUG] full docker command: %s", " ".join(cmd))
             logger.info("starting docker session=%s gamePort=%s voicePort=%s", session_id, game_port, voice_port)
-            cid = subprocess.check_output(cmd, stderr=subprocess.STDOUT, text=True).strip()
+            
+            try:
+                cid = subprocess.check_output(cmd, stderr=subprocess.STDOUT, text=True).strip()
+                logger.info("[DEBUG] docker container started successfully: containerID=%s", cid)
+            except subprocess.CalledProcessError as e:
+                logger.error("[DEBUG] docker run failed with exit code %s: %s", e.returncode, e.output)
+                raise RuntimeError(f"docker run failed: {e.output}")
+            
             with _lock:
                 _sessions[session_id] = {
                     "runtime": "docker",
@@ -182,7 +212,9 @@ def create_session(payload: dict[str, Any]) -> dict[str, Any]:
                     "createdAt": time.time(),
                 }
         else:
+            logger.info("[DEBUG] process mode: GAME_EXE=%s", GAME_EXE)
             if not os.path.exists(GAME_EXE):
+                logger.error("[DEBUG] game executable missing: %s", GAME_EXE)
                 raise RuntimeError(f"game executable missing: {GAME_EXE}")
 
             logger.info("starting process session=%s gamePort=%s voicePort=%s", session_id, game_port, voice_port)

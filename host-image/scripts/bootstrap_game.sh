@@ -15,6 +15,7 @@ STEAM_AUTH_CODE="${STEAM_AUTH_CODE:-}"
 STEAM_GUARD_CODE="${STEAM_GUARD_CODE:-}"
 STEAM_BRANCH="${STEAM_BRANCH:-}"
 STEAM_BRANCH_PASSWORD="${STEAM_BRANCH_PASSWORD:-}"
+STEAM_USE_CACHE="${STEAM_USE_CACHE:-1}"
 
 mkdir -p "${GAME_DIR}" "${WINEPREFIX}"
 
@@ -45,11 +46,21 @@ run_steamcmd_install() {
       "${branch_args[@]}" \
       +quit
   else
-    echo "[bootstrap] Running SteamCMD with authenticated login"
-    local login_args=("+login" "${STEAM_USER}" "${STEAM_PASS}")
-    if [[ -n "${auth}" ]]; then
-      login_args+=("${auth}")
+    echo "[bootstrap] Running SteamCMD with authenticated login for ${STEAM_USER}"
+    local login_args=("+login" "${STEAM_USER}")
+    
+    # If using cached login token (empty password), don't pass password
+    # Steam will use cached credentials from ~/.steam directory
+    if [[ -n "${STEAM_PASS}" ]]; then
+      login_args+=("${STEAM_PASS}")
+      if [[ -n "${auth}" ]]; then
+        login_args+=("${auth}")
+      fi
+      echo "[bootstrap] Using provided credentials (first-time setup)"
+    else
+      echo "[bootstrap] Using cached login token from ~/.steam directory"
     fi
+    
     "${STEAMCMD_DIR}/steamcmd.sh" \
       +force_install_dir "${GAME_DIR}" \
       "${login_args[@]}" \

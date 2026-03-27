@@ -28,8 +28,11 @@ ENV STEAMCMD_DIR=/opt/steamcmd \
     MODS_DIR=/data/mods \
     EOB_APP_ID=999860
 
-RUN mkdir -p /opt/andromeda /data \
-    && chown -R andromeda:andromeda /opt/andromeda /data
+RUN mkdir -p /opt/andromeda /data /home/andromeda/.steam \
+    && chown -R andromeda:andromeda /opt/andromeda /data /home/andromeda/.steam
+
+# Volume for Steam login cache (persists credentials between container runs)
+VOLUME ["/home/andromeda/.steam"]
 
 COPY scripts/install_steamcmd.sh /opt/andromeda/install_steamcmd.sh
 COPY scripts/bootstrap_game.sh /opt/andromeda/bootstrap_game.sh
