@@ -3,8 +3,8 @@ set -euo pipefail
 
 GAME_DIR="${GAME_DIR:-/data/game}"
 MELONLOADER_DIR="${MELONLOADER_DIR:-/data/melonloader}"
-MELONLOADER_URL="${MELONLOADER_URL:-}"
-MELONLOADER_VERSION="${MELONLOADER_VERSION:-manual}"
+MELONLOADER_URL="${MELONLOADER_URL:-https://github.com/LavaGang/MelonLoader/releases/latest/download/MelonLoader.Linux.x64.zip}"
+MELONLOADER_VERSION="${MELONLOADER_VERSION:-latest}"
 STAMP_FILE="${MELONLOADER_DIR}/.melonloader_version"
 
 mkdir -p "${MELONLOADER_DIR}"

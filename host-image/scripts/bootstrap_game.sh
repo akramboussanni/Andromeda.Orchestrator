@@ -55,7 +55,7 @@ run_steamcmd_install() {
         +login anonymous \
         "${app_update_args[@]}" \
         "${branch_args[@]}" \
-        +quit
+        +quit || true
     else
       echo "[bootstrap] Running SteamCMD with authenticated login for ${STEAM_USER}"
       local login_args=("+login" "${STEAM_USER}")
@@ -77,7 +77,7 @@ run_steamcmd_install() {
         "${login_args[@]}" \
         "${app_update_args[@]}" \
         "${branch_args[@]}" \
-        +quit
+        +quit || true
     fi
   )
 }

@@ -201,7 +201,7 @@ def create_session(payload: dict[str, Any]) -> dict[str, Any]:
             cname = f"{DOCKER_CONTAINER_PREFIX}-{session_id[:12]}"
             logger.info("[DEBUG] container name will be: %s", cname)
 
-            cmd = ["docker", "run", "-d", "--security-opt", "seccomp=unconfined"]
+            cmd = ["docker", "run", "-d", "--security-opt", "seccomp=unconfined", "--ipc=host", "--shm-size=256m"]
             if DOCKER_AUTO_REMOVE:
                 cmd.append("--rm")
             cmd.extend([
