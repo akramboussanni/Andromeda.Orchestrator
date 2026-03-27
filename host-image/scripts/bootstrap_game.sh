@@ -24,6 +24,7 @@ export HOME="${HOME:-/home/andromeda}"
 
 mkdir -p "${GAME_DIR}" "${WINEPREFIX}"
 mkdir -p "${HOME}/.steam"
+mkdir -p "${MELONLOADER_DIR:-/data/melonloader}" "${MODS_DIR:-/data/mods}"
 chown -R andromeda:andromeda "${STEAMCMD_DIR}" "${GAME_DIR}" "${WINEPREFIX}" "${MELONLOADER_DIR:-/data/melonloader}" "${MODS_DIR:-/data/mods}" "${HOME}/.steam"
 
 gosu andromeda /opt/andromeda/install_steamcmd.sh
