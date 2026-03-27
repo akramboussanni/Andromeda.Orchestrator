@@ -17,6 +17,8 @@ RUN dpkg --add-architecture i386 \
         winbind \
         xvfb \
         lib32gcc-s1 \
+        libstdc++6:i386 \
+        libc6:i386 \
     && rm -rf /var/lib/apt/lists/*
 
 RUN useradd -m -u 1000 -s /bin/bash andromeda

@@ -21,6 +21,11 @@ DOCKER_IMAGE = os.getenv("HOST_DOCKER_IMAGE", "").strip()
 DOCKER_CONTAINER_PREFIX = os.getenv("HOST_DOCKER_CONTAINER_PREFIX", "andromeda-eob")
 DOCKER_ENTRYPOINT = os.getenv("HOST_DOCKER_ENTRYPOINT", "")
 DOCKER_DATA_ROOT = os.getenv("HOST_DOCKER_DATA_ROOT", "").strip()
+STEAM_CACHE_VOLUME = os.getenv("HOST_STEAM_CACHE_VOLUME", "").strip()
+MELONLOADER_URL = os.getenv("MELONLOADER_URL", "https://api.github.com/repos/LavaGang/MelonLoader/releases/latest")
+MELONLOADER_VERSION = os.getenv("MELONLOADER_VERSION", "")
+ANDROMEDA_MOD_URL = os.getenv("ANDROMEDA_MOD_URL", "https://api.github.com/repos/akramboussanni/Andromeda.Mod/releases/latest")
+ANDROMEDA_MOD_VERSION = os.getenv("ANDROMEDA_MOD_VERSION", "")
 
 logger.info("[STARTUP] Configuration loaded:")
 logger.info("[STARTUP]   RUNTIME_MODE=%s", RUNTIME_MODE)
@@ -28,6 +33,9 @@ logger.info("[STARTUP]   DOCKER_IMAGE=%s", DOCKER_IMAGE)
 logger.info("[STARTUP]   DOCKER_CONTAINER_PREFIX=%s", DOCKER_CONTAINER_PREFIX)
 logger.info("[STARTUP]   DOCKER_ENTRYPOINT=%s", DOCKER_ENTRYPOINT)
 logger.info("[STARTUP]   DOCKER_DATA_ROOT=%s", DOCKER_DATA_ROOT)
+logger.info("[STARTUP]   STEAM_CACHE_VOLUME=%s", STEAM_CACHE_VOLUME)
+logger.info("[STARTUP]   MELONLOADER_URL=%s", MELONLOADER_URL)
+logger.info("[STARTUP]   ANDROMEDA_MOD_URL=%s", ANDROMEDA_MOD_URL)
 logger.info("[STARTUP]   PORT_RANGE=%s-%s", PORT_RANGE_START, PORT_RANGE_END)
 logger.info("[STARTUP]   MAX_SESSIONS=%s", MAX_SESSIONS)
 
@@ -109,19 +117,34 @@ def _build_container_env_args(session_id: str) -> list[str]:
         args.extend(["-e", "MELONLOADER_DIR=/data/melonloader"])
         args.extend(["-e", "MODS_DIR=/data/mods"])
 
-    for env_name in _FORWARDED_CONTAINER_ENV:
+    # Forward Steam vars
+    for env_name in ("STEAM_USER", "STEAM_PASS", "STEAM_AUTH_CODE", "STEAM_GUARD_CODE", "STEAM_BRANCH", "STEAM_BRANCH_PASSWORD", "EOB_APP_ID", "EOB_AUTO_UPDATE", "EOB_VALIDATE", "EOB_EXE_RELATIVE_PATH"):
         value = os.getenv(env_name)
         if value is not None and value != "":
             args.extend(["-e", f"{env_name}={value}"])
+    
+    # Pass MelonLoader & Andromeda with defaults
+    args.extend(["-e", f"MELONLOADER_URL={MELONLOADER_URL}"])
+    if MELONLOADER_VERSION:
+        args.extend(["-e", f"MELONLOADER_VERSION={MELONLOADER_VERSION}"])
+    args.extend(["-e", f"ANDROMEDA_MOD_URL={ANDROMEDA_MOD_URL}"])
+    if ANDROMEDA_MOD_VERSION:
+        args.extend(["-e", f"ANDROMEDA_MOD_VERSION={ANDROMEDA_MOD_VERSION}"])
+    
     return args
 
 
 def _build_container_volume_args() -> list[str]:
-    if not DOCKER_DATA_ROOT:
-        return []
-    host_path = pathlib.Path(DOCKER_DATA_ROOT).expanduser().resolve()
-    host_path.mkdir(parents=True, exist_ok=True)
-    return ["-v", f"{host_path}:/data"]
+    args = []
+    if DOCKER_DATA_ROOT:
+        host_path = pathlib.Path(DOCKER_DATA_ROOT).expanduser().resolve()
+        host_path.mkdir(parents=True, exist_ok=True)
+        args.extend(["-v", f"{host_path}:/data"])
+    if STEAM_CACHE_VOLUME:
+        # STEAM_CACHE_VOLUME can be a named Docker volume or a host path
+        # Examples: "steam-login-cache" or "/mnt/steam-cache"
+        args.extend(["-v", f"{STEAM_CACHE_VOLUME}:/home/andromeda/.steam"])
+    return args
 
 
 def create_session(payload: dict[str, Any]) -> dict[str, Any]:
