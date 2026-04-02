@@ -47,6 +47,17 @@ The repository includes a GitHub Actions workflow that publishes this image to G
 - Anonymous SteamCMD can fail for some depots; use authenticated Steam credentials when needed.
 - Verify game licensing terms before automating distribution.
 
+## Windows Support
+
+The orchestrator can natively run and host sessions on Windows without Docker by using `process` mode. 
+
+A setup script is provided to automatically download SteamCMD, install the game server, and install MelonLoader alongside the Andromeda Mod.
+
+1. Double-click or run `setup_windows.bat` in this directory (Requires Windows 10 Build 17063+ or Windows 11).
+2. Edit your `.env` file to set:
+   - `HOST_RUNTIME_MODE=process`
+   - `HOST_GAME_EXECUTABLE_PATH=data\game\enemy-on-board.exe`
+
 ## Local run
 
 ```bash
