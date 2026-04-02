@@ -16,6 +16,11 @@ if %ERRORLEVEL% NEQ 0 (
     echo [ERROR] tar is required but not found. Windows 10 build 17063+ or Windows 11 required.
     exit /b 1
 )
+where python >nul 2>nul
+if %ERRORLEVEL% NEQ 0 (
+    echo [ERROR] python is required but not found in PATH.
+    exit /b 1
+)
 
 :: Directories and Vars
 set BASE_DIR=%~dp0
@@ -39,39 +44,63 @@ mkdir "%MODS_DIR%" 2>nul
 
 :: 1. SteamCMD
 if not exist "%STEAMCMD_DIR%\steamcmd.exe" (
-    echo [1/4] Downloading and extracting SteamCMD...
+    echo [1/5] Downloading and extracting SteamCMD...
     curl -fsSL "%STEAMCMD_URL%" -o "%DATA_DIR%\steamcmd.zip"
     tar -xf "%DATA_DIR%\steamcmd.zip" -C "%STEAMCMD_DIR%"
     del "%DATA_DIR%\steamcmd.zip"
 ) else (
-    echo [1/4] SteamCMD already installed.
+    echo [1/5] SteamCMD already installed.
 )
 
 :: 2. Game
-echo [2/4] Downloading game via SteamCMD ^(AppID: %EOB_APP_ID%^)...
-if defined STEAM_USER (
-    if defined STEAM_PASS (
-        "%STEAMCMD_DIR%\steamcmd.exe" +force_install_dir "%GAME_DIR%" +login %STEAM_USER% %STEAM_PASS% %STEAM_AUTH_CODE% +app_update %EOB_APP_ID% validate +quit
-    ) else (
-        "%STEAMCMD_DIR%\steamcmd.exe" +force_install_dir "%GAME_DIR%" +login %STEAM_USER% +app_update %EOB_APP_ID% validate +quit
-    )
-) else (
+echo [2/5] Downloading game via SteamCMD ^(AppID: %EOB_APP_ID%^)...
+
+if not defined STEAM_USER (
+    set /p "STEAM_USER=Enter Steam Username (leave blank for anonymous): "
+)
+if "!STEAM_USER!"=="" set STEAM_USER=anonymous
+
+if /I "!STEAM_USER!"=="anonymous" (
     "%STEAMCMD_DIR%\steamcmd.exe" +force_install_dir "%GAME_DIR%" +login anonymous +app_update %EOB_APP_ID% validate +quit
+) else (
+    if not defined STEAM_PASS (
+        set /p "STEAM_PASS=Enter Steam Password (leave blank if using cached credentials): "
+    )
+    if "!STEAM_PASS!"=="" (
+        "%STEAMCMD_DIR%\steamcmd.exe" +force_install_dir "%GAME_DIR%" +login !STEAM_USER! +app_update %EOB_APP_ID% validate +quit
+    ) else (
+        if not defined STEAM_AUTH_CODE (
+            set /p "STEAM_AUTH_CODE=Enter Steam Guard Code (leave blank if none/cached): "
+        )
+        if "!STEAM_AUTH_CODE!"=="" (
+            "%STEAMCMD_DIR%\steamcmd.exe" +force_install_dir "%GAME_DIR%" +login !STEAM_USER! !STEAM_PASS! +app_update %EOB_APP_ID% validate +quit
+        ) else (
+            "%STEAMCMD_DIR%\steamcmd.exe" +force_install_dir "%GAME_DIR%" +login !STEAM_USER! !STEAM_PASS! !STEAM_AUTH_CODE! +app_update %EOB_APP_ID% validate +quit
+        )
+    )
 )
 
 :: 3. MelonLoader
 if not exist "%GAME_DIR%\MelonLoader" (
-    echo [3/4] Downloading and extracting MelonLoader...
+    echo [3/5] Downloading and extracting MelonLoader...
     curl -fsSL "%MELONLOADER_URL%" -o "%DATA_DIR%\melonloader.zip"
     tar -xf "%DATA_DIR%\melonloader.zip" -C "%GAME_DIR%"
     del "%DATA_DIR%\melonloader.zip"
 ) else (
-    echo [3/4] MelonLoader already appears to be installed.
+    echo [3/5] MelonLoader already appears to be installed.
 )
 
 :: 4. Andromeda Mod
-echo [4/4] Downloading Andromeda Mod...
+echo [4/5] Downloading Andromeda Mod...
 curl -fsSL "%ANDROMEDA_MOD_URL%" -o "%MODS_DIR%\Andromeda.Mod.dll"
+
+:: 5. Python Environment
+echo [5/5] Setting up Python virtual environment...
+if not exist "%BASE_DIR%venv" (
+    python -m venv "%BASE_DIR%venv"
+)
+echo [setup] Installing Python dependencies...
+"%BASE_DIR%venv\Scripts\python.exe" -m pip install -r "%BASE_DIR%requirements.txt"
 
 :: Create or update .env file
 echo [setup] Checking configuration in .env ...
@@ -87,7 +116,7 @@ echo Ensure your .env file is updated for process mode:
 echo   HOST_RUNTIME_MODE=process
 echo   HOST_GAME_EXECUTABLE_PATH=%GAME_DIR%\%EOB_EXE_RELATIVE_PATH%
 echo.
-echo Run the orchestrator with:
-echo   uvicorn main:app --host 0.0.0.0 --port 9000
+echo Run the orchestrator with your new virtual environment:
+echo   venv\Scripts\uvicorn.exe main:app --host 0.0.0.0 --port 9000
 echo ===================================================
 pause

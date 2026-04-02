@@ -60,6 +60,12 @@ A setup script is provided to automatically download SteamCMD, install the game 
 
 ## Local run
 
+Using the created virtual environment (Windows):
+```bash
+venv\Scripts\uvicorn.exe main:app --host 0.0.0.0 --port 9000
+```
+
+Using a global environment (Linux/Mac):
 ```bash
 uvicorn main:app --host 0.0.0.0 --port 9000
 ```
