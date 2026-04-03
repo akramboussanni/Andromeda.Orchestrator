@@ -9,7 +9,9 @@ import subprocess
 import threading
 import time
 from typing import Any
+from dotenv import load_dotenv
 
+load_dotenv()
 logger = logging.getLogger("HostRuntime")
 
 RUNTIME_MODE = os.getenv("HOST_RUNTIME_MODE", "docker").strip().lower()
