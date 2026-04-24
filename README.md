@@ -1,34 +1,43 @@
 # Andromeda Orchestrator (Host Runtime)
 
-Andromeda.Orchestrator is the game-host service that runs dedicated sessions and exposes a small API used by Andromeda.Core. The Orchestrator/Core connection is "engineered" non-orthodox with DNS hacks to try to keep a near-zero cost when unused.
+Andromeda.Orchestrator is the game-host runtime that launches dedicated sessions and exposes a small API used by `Andromeda.Core`.
+
+[![Discord](https://img.shields.io/badge/Discord-Hosting%20Support-5865F2?logo=discord&logoColor=white)](https://discord.gg/fMbrCUKHP8)
+
+## What It Does
+
+- Boots and tracks game-session processes or containers.
+- Exposes session lifecycle endpoints for Core.
+- Supports low-cost hosting patterns that can stay mostly idle when unused.
 
 ## API
 
-- GET /health
-- POST /boot
-- POST /sessions/create
-- POST /sessions/{session_id}/stop
-- GET /sessions/{session_id}/ports
+- `GET /health`
+- `POST /boot`
+- `POST /sessions/create`
+- `POST /sessions/{session_id}/stop`
+- `GET /sessions/{session_id}/ports`
 
 ## Authentication
 
-Set HOST_API_TOKEN to require authentication. Clients can send:
+Set `HOST_API_TOKEN` to require authentication. Clients can send:
 
-- Authorization: Bearer <token>
-- X-Api-Token: <token>
+- `Authorization: Bearer <token>`
+- `X-Api-Token: <token>`
 
 ## Environment
 
-- HOST_RUNTIME_MODE=docker|process
-- HOST_GAME_EXECUTABLE_PATH (required in process mode)
-- HOST_PORT_RANGE_START
-- HOST_PORT_RANGE_END
-- HOST_MAX_SESSIONS
-- HOST_DOCKER_IMAGE (required in docker mode)
-- HOST_DOCKER_CONTAINER_PREFIX
-- HOST_DOCKER_ENTRYPOINT
-- HOST_DOCKER_DATA_ROOT (optional; mount path reused by spawned game containers)
-- HOST_API_TOKEN (recommended)
+- `HOST_RUNTIME_MODE=docker|process`
+- `HOST_GAME_EXECUTABLE_PATH` (required in process mode)
+- `HOST_PORT_RANGE_START`
+- `HOST_PORT_RANGE_END`
+- `HOST_MAX_SESSIONS`
+- `HOST_DOCKER_IMAGE` (required in docker mode)
+- `HOST_DOCKER_CONTAINER_PREFIX`
+- `HOST_DOCKER_ENTRYPOINT`
+- `HOST_DOCKER_DATA_ROOT` (optional; mount path reused by spawned game containers)
+- `HOST_API_TOKEN` (recommended)
+- `HOST_SESSION_API_URL` (optional fallback API URL passed to launched game sessions)
 
 ## Docker host image automation
 
@@ -105,3 +114,7 @@ Common optional variables:
 - Restrict inbound access to trusted central API IPs.
 - Use docker mode for reproducible deployments.
 - Keep port ranges dedicated to this service only.
+
+## Community
+
+[Join Discord](https://discord.gg/fMbrCUKHP8) for hosting and deployment support.

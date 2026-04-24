@@ -18,6 +18,7 @@ class SessionCreateRequest(BaseModel):
     isPublic: bool = False
     gamemode: str = "CustomParty"
     gamemodeData: Any = None
+    apiUrl: Optional[str] = None
 
 
 class SessionStopRequest(BaseModel):

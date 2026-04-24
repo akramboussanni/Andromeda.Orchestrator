@@ -9,6 +9,7 @@ import subprocess
 import threading
 import time
 from typing import Any
+
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -29,6 +30,7 @@ MELONLOADER_URL = os.getenv("MELONLOADER_URL", "https://github.com/LavaGang/Melo
 MELONLOADER_VERSION = os.getenv("MELONLOADER_VERSION", "")
 ANDROMEDA_MOD_URL = os.getenv("ANDROMEDA_MOD_URL", "https://api.github.com/repos/akramboussanni/Andromeda.Mod/releases/latest")
 ANDROMEDA_MOD_VERSION = os.getenv("ANDROMEDA_MOD_VERSION", "")
+SESSION_API_URL = os.getenv("HOST_SESSION_API_URL", "").strip().rstrip("/")
 
 logger.info("[STARTUP] Configuration loaded:")
 logger.info("[STARTUP]   RUNTIME_MODE=%s", RUNTIME_MODE)
@@ -112,8 +114,12 @@ def _release_pair(session_id: str):
         _used_ports.discard(int(state["voicePort"]))
 
 
-def _build_container_env_args(session_id: str) -> list[str]:
+def _build_container_env_args(session_id: str, api_url: str = "") -> list[str]:
     args = ["-e", f"ANDROMEDA_SESSION_ID={session_id}"]
+    resolved_api_url = api_url.strip().rstrip("/") if api_url else ""
+    if resolved_api_url:
+        args.extend(["-e", f"ANDROMEDA_API_URL={resolved_api_url}"])
+
     if DOCKER_DATA_ROOT:
         args.extend(["-e", "GAME_DIR=/data/game"])
         args.extend(["-e", f"WINEPREFIX=/data/wineprefix/{session_id}"])
@@ -162,8 +168,12 @@ def create_session(payload: dict[str, Any]) -> dict[str, Any]:
     gamemode = str(payload.get("gamemode", "CustomParty"))
     gamemode_data = payload.get("gamemodeData")
     is_public = bool(payload.get("isPublic", False))
+    max_players = int(payload["maxPlayers"]) if payload.get("maxPlayers") and int(payload["maxPlayers"]) >= 2 else None
+    api_url = str(payload.get("apiUrl") or SESSION_API_URL or "").strip().rstrip("/")
+    channel_code = str(payload.get("channelCode") or "").strip()
+    channel_key = str(payload.get("channelKey") or "").strip()
 
-    logger.info("[DEBUG] session config: region=%s, name=%s, gamemode=%s, isPublic=%s", region, name, gamemode, is_public)
+    logger.info("[DEBUG] session config: region=%s, name=%s, gamemode=%s, isPublic=%s, maxPlayers=%s", region, name, gamemode, is_public, max_players)
 
     game_port, voice_port = _allocate_pair(session_id)
     logger.info("[DEBUG] allocated ports: gamePort=%s, voicePort=%s", game_port, voice_port)
@@ -184,6 +194,11 @@ def create_session(payload: dict[str, Any]) -> dict[str, Any]:
         "--mode", gamemode,
     ]
 
+    if channel_code:
+        args.extend(["--channel-code", channel_code])
+    if channel_key:
+        args.extend(["--channel-key", channel_key])
+
     if gamemode_data is not None:
         mode_json = json.dumps(gamemode_data, separators=(",", ":"))
         mode_b64 = base64.b64encode(mode_json.encode("utf-8")).decode("ascii")
@@ -191,6 +206,12 @@ def create_session(payload: dict[str, Any]) -> dict[str, Any]:
 
     if is_public:
         args.append("--public")
+
+    if max_players is not None:
+        args.extend(["--max-players", str(max_players)])
+
+    if api_url:
+        args.extend(["--api-url", api_url])
 
     try:
         if RUNTIME_MODE == "docker":
@@ -210,7 +231,7 @@ def create_session(payload: dict[str, Any]) -> dict[str, Any]:
                 "--name", cname,
             ])
             cmd.extend(_build_container_volume_args())
-            cmd.extend(_build_container_env_args(session_id))
+            cmd.extend(_build_container_env_args(session_id, api_url))
             cmd.extend([
                 "-p", f"{game_port}:{game_port}/udp",
                 "-p", f"{game_port}:{game_port}/tcp",
@@ -248,7 +269,14 @@ def create_session(payload: dict[str, Any]) -> dict[str, Any]:
                 raise RuntimeError(f"game executable missing: {GAME_EXE}")
 
             logger.info("starting process session=%s gamePort=%s voicePort=%s", session_id, game_port, voice_port)
-            proc = subprocess.Popen([GAME_EXE] + args)
+            proc_env = os.environ.copy()
+            if api_url:
+                proc_env["ANDROMEDA_API_URL"] = api_url
+            if channel_code:
+                proc_env["ANDROMEDA_CHANNEL_CODE"] = channel_code
+            if channel_key:
+                proc_env["ANDROMEDA_CHANNEL_KEY"] = channel_key
+            proc = subprocess.Popen([GAME_EXE] + args, env=proc_env)
             with _lock:
                 _sessions[session_id] = {
                     "runtime": "process",
